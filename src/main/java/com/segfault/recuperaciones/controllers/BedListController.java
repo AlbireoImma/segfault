@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 import java.util.List;
+import java.util.Arrays;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -15,7 +16,7 @@ import com.segfault.recuperaciones.repository.BedListRepository;
 
 @RestController
 @RequestMapping("/bed")
-@Api(value="Sala de recuperaciones", description="Descripción del comportamiento de la API REST")
+@Api(value="Sala de recuperaciones")
 public class BedListController {
 
     @Autowired
@@ -47,27 +48,48 @@ public class BedListController {
     }
 
 
-    @ApiOperation(value = "Buscar camas según su condicion", response = BedList.class)
+    @ApiOperation(value = "Buscar camas según su condicion", response = List.class)
     @ApiResponses(value = {
-        @ApiResponse(code = 200, message = "Recursos encontrados con exito"),
-        @ApiResponse(code = 404, message = "No existen camas en esa condicion")
+        @ApiResponse(code = 200, message = "Recursos encontrados con éxito"),
+        @ApiResponse(code = 404, message = "No existen camas en esa condición")
     })
 
     @GetMapping(value = "/cond", params = "condition")
-    public ResponseEntity getBed(@RequestParam(value="condition") String condition){
+    public ResponseEntity getBed(@RequestParam(value="condition") boolean condition){
+
         List<BedList> foundBedListArr = bedRepository.findByCondition(condition);
+
     	if(!foundBedListArr.isEmpty()){
             return ResponseEntity.ok(foundBedListArr);
     	}
     	else {
-    	    return ResponseEntity.badRequest().body("No existen Camas " + condition + "s");
+            String conditionStatus = ((condition == true) ? "ocupadas" : "vacías");
+    	    return ResponseEntity.badRequest().body("No existen camas " + conditionStatus);
     	}
-    }   
+    }
+
+
+    @ApiOperation(value = "Buscar cama asociada a paciente", response = BedList.class)
+    @ApiResponses(value = {
+        @ApiResponse(code = 200, message = "Recurso encontrado con éxito"),
+        @ApiResponse(code = 404, message = "No existen camas asociadas a paciente")
+    })
+
+    @GetMapping(value = "/paciente", params = "paciente")
+    public ResponseEntity getBed(@RequestParam(value="paciente") long paciente){
+        //if BD Pacientes contains paciente
+        Optional<BedList> foundBedList = bedRepository.findByPaciente(paciente);
+        if(foundBedList.isPresent()){
+            return ResponseEntity.ok(foundBedList.get());
+        } else {
+            return ResponseEntity.badRequest().body("No existe una cama con el paciente: " + paciente);
+        }
+    }
     
 
     @ApiOperation(value = "Añadir una cama con una condición y paciente", response = BedList.class)
     @PostMapping(value = "/add")
-    public ResponseEntity addToBedList(@RequestParam(value = "condition") String condition, @RequestParam(value = "paciente") Long paciente) {
+    public ResponseEntity addToBedList(@RequestParam(value = "condition") boolean condition, @RequestParam(value = "paciente") Long paciente) {
         return ResponseEntity.ok(bedRepository.save(new BedList(paciente, condition)));
     }
 
@@ -83,7 +105,7 @@ public class BedListController {
     @ApiOperation(value = "Añadir una cama vacía", response = BedList.class)
     @PostMapping(value = "/vacia")
     public ResponseEntity addToBedList() {
-        return ResponseEntity.ok(bedRepository.save(new BedList(-1, "Vacía")));
+        return ResponseEntity.ok(bedRepository.save(new BedList(-1, false)));
     }
 
 
@@ -93,14 +115,28 @@ public class BedListController {
         @ApiResponse(code = 404, message="El recurso no existe")
     })
     @PutMapping(value = "/")
-    public ResponseEntity updateBedList(@RequestParam(value = "condition") String condition, @RequestParam(value = "id") Long id, @RequestParam(value = "paciente") Long paciente){
+    public ResponseEntity updateBedList(@RequestParam(value = "id") Long id, @RequestParam(value = "paciente") Long paciente){
+        
         Optional<BedList> optionalBedList = bedRepository.findById(id);
         if (!optionalBedList.isPresent()) {
             return ResponseEntity.badRequest().body("No existe una cama con el id: " + id);
         }
+        
         BedList foundBedList = optionalBedList.get();
-        foundBedList.setPaciente(paciente);
-        foundBedList.setCondition(condition);
+        
+        //condiciones correctas de actualización
+        if(paciente == -1){
+            foundBedList.setCondition(false);
+            foundBedList.setPaciente(paciente);
+        }
+        else if(paciente > 0){
+            foundBedList.setCondition(true);
+            foundBedList.setPaciente(paciente);
+        }
+        else{
+            return ResponseEntity.badRequest().body("No es posible realizar esa actualización de cama.");
+        }
+        
         return ResponseEntity.ok(bedRepository.save(foundBedList));
     }
 

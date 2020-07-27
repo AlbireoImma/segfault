@@ -13,9 +13,9 @@ public class BedList {
     @ApiModelProperty(notes = "ID autogenerado por cama")
     private long id;
 
-    @Column(name = "condition", length = 15, nullable = false)
+    @Column(name = "condition", nullable = false)
     @ApiModelProperty(notes = "Condición de la cama")
-    private String condition;
+    private boolean condition;
 
     @Column
     @ApiModelProperty(notes = "ID del paciente en la cama, en caso de estar vacía es un -1")
@@ -25,12 +25,12 @@ public class BedList {
 
     }
 
-    public BedList(long paciente, String condition){
+    public BedList(long paciente, boolean condition){
         this.paciente = paciente;
         this.condition = condition;
     }
 
-    public BedList(long id, long paciente, String condition){
+    public BedList(long id, long paciente, boolean condition){
         this.id = id;
         this.paciente = paciente;
         this.condition = condition;
@@ -44,11 +44,11 @@ public class BedList {
         this.id = id;
     }
 
-    public String getCondition(){
+    public boolean getCondition(){
         return condition;
     }
 
-    public void setCondition(String condition){
+    public void setCondition(boolean condition){
         this.condition = condition;
     }
 
